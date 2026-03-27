@@ -145,28 +145,11 @@
             object-fit: cover;
             border: 2px solid #6f3689;
         }
-        .search-box {
-            position: absolute;
-            top: 10px;
-            left: 60px;
-            z-index: 1000;
-        }
-        .search-box input {
-            padding: 8px 14px;
-            border: 2px solid #ccc;
-            border-radius: 20px;
-            font-size: 16px;
-            width: 250px;
-            outline: none;
-        }
-        .search-box input:focus {
-            border-color: #6f3689;
-        }
         .search-results {
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-            max-height: 300px;
+            max-height: 200px;
             overflow-y: auto;
             margin-top: 4px;
             display: none;
@@ -402,21 +385,6 @@
                 margin-top: 4px;
                 gap: 4px;
             }
-            .search-box {
-                top: auto !important;
-                bottom: 20px;
-                left: 10px !important;
-                right: 10px;
-            }
-            .search-box input {
-                width: 100%;
-            }
-            .search-results {
-                bottom: 100%;
-                top: auto;
-                margin-bottom: 4px;
-                margin-top: 0;
-            }
             .group-bar {
                 bottom: 60px;
                 left: 10px;
@@ -515,6 +483,10 @@
     <div class="info-box">
         <h2 id="infoToggle">TAM Ledenkaart</h2>
         <div class="info-body">
+            <div style="margin-bottom:8px;">
+                <input type="text" id="search" placeholder="Zoek een lid..." autocomplete="off" style="width:100%;padding:6px 12px;border:2px solid #ccc;border-radius:16px;font-size:16px;outline:none;">
+                <div class="search-results" id="searchResults"></div>
+            </div>
             <div class="count" id="memberCount">605 leden</div>
             <div class="filter-group">
                 <button class="filter-btn" data-filter="all">Iedereen</button>
@@ -529,10 +501,6 @@
                 <button class="filter-btn" id="groupModeBtn">Huizen beheren</button>
             </div>
         </div>
-    </div>
-    <div class="search-box">
-        <input type="text" id="search" placeholder="Zoek een lid..." autocomplete="off">
-        <div class="search-results" id="searchResults"></div>
     </div>
     <div class="group-bar" id="groupBar">
         <span class="selected-names" id="selectedNames">Klik op leden om te groeperen...</span>
@@ -847,7 +815,7 @@
         });
 
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.search-box')) {
+            if (!e.target.closest('.info-box')) {
                 searchResults.classList.remove('show');
             }
         });
