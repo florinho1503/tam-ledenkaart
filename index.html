@@ -32,7 +32,7 @@
             justify-content: space-between;
         }
         .info-box h2 .toggle-icon {
-            font-size: 20px;
+            font-size: 28px;
             color: #6f3689;
             transition: transform 0.2s;
         }
@@ -148,6 +148,31 @@
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #6f3689;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .popup-avatar img:hover {
+            opacity: 0.8;
+        }
+        .photo-lightbox {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .photo-lightbox.open {
+            display: flex;
+        }
+        .photo-lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+            object-fit: contain;
         }
         .search-results {
             background: white;
@@ -262,7 +287,12 @@
             align-items: center;
             gap: 8px;
             cursor: pointer;
-            padding: 6px 0;
+            padding: 6px 4px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+        .popup-member-header:hover {
+            background: #f3e8fa;
         }
         .popup-member-header img {
             width: 36px;
@@ -292,8 +322,10 @@
         }
         .popup-member-header .fold-arrow {
             margin-left: auto;
-            color: #aaa;
-            font-size: 12px;
+            color: #6f3689;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 0 4px;
         }
         .popup-member-detail {
             display: none;
@@ -484,6 +516,9 @@
         </div>
     </div>
     <div id="map"></div>
+    <div class="photo-lightbox" id="photoLightbox" onclick="this.classList.remove('open')">
+        <img id="lightboxImg" src="" alt="">
+    </div>
     <div class="info-box">
         <h2 id="infoToggle">TAM Ledenkaart <span class="toggle-icon">▾</span></h2>
         <div class="info-body">
@@ -656,9 +691,9 @@
             group.forEach((m, i) => {
                 if (i > 0) html += '<hr class="popup-separator">';
                 const avatar = m.avatar
-                    ? `<img src="${m.avatar}" alt="${m.name}">`
+                    ? `<img src="${m.avatar}" alt="${m.name}" class="clickable-avatar" style="cursor:pointer">`
                     : `<div class="initials-small">${getInitials(m.name)}</div>`;
-                html += `<div class="popup-member-header" onclick="toggleMember(this)">
+                html += `<div class="popup-member-header" onclick="toggleMember(this, event)">
                     ${avatar}
                     <span class="member-name">${m.name}</span>
                     <span class="fold-arrow">▸</span>
@@ -695,7 +730,7 @@
         function buildPopup(m) {
             let html = '';
             if (m.avatar) {
-                html += `<div class="popup-avatar"><img src="${m.avatar}" alt="${m.name}"/></div>`;
+                html += `<div class="popup-avatar"><img src="${m.avatar}" alt="${m.name}" onclick="openLightbox(this.src)"/></div>`;
             }
             html += `<div class="popup-name">${m.name}</div>`;
             html += `<div class="popup-address">${m.street}, ${m.postcode} ${m.city}</div>`;
@@ -926,7 +961,7 @@
                 const m0 = groupMembers[0];
                 const icon = currentView === 'photo' ? makeGroupIcon(groupMembers) : purpleIcon;
                 const popupHtml = buildFoldedGroupPopup(groupMembers, group.name)
-                    + `<div class="popup-ungroup"><button onclick="ungroupHouse(${JSON.stringify(group.members).replace(/"/g,'&quot;')})">Splits groep</button></div>`;
+                    + `<div class="popup-ungroup"><button onclick="ungroupHouse(${JSON.stringify(group.members).replace(/"/g,'&quot;')})">Splits huis</button></div>`;
                 const marker = L.marker([m0.lat, m0.lon], { icon }).bindPopup(popupHtml, {minWidth: 280, maxWidth: 320, autoPan: false});
                 markersGroup.addLayer(marker);
                 groupMembers.forEach(m => {
@@ -990,7 +1025,16 @@
                 currentFilter === 'active' ? `${count} actieve leden` : currentFilter === 'quotes' ? `${count} grappenmakers` : `${count} leden`;
         };
 
-        window.toggleMember = function(el) {
+        window.openLightbox = function(src) {
+            document.getElementById('lightboxImg').src = src;
+            document.getElementById('photoLightbox').classList.add('open');
+        };
+
+        window.toggleMember = function(el, event) {
+            if (event && event.target.classList.contains('clickable-avatar')) {
+                openLightbox(event.target.src);
+                return;
+            }
             const detail = el.nextElementSibling;
             const arrow = el.querySelector('.fold-arrow');
             detail.classList.toggle('open');
