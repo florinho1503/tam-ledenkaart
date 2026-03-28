@@ -2094,7 +2094,7 @@
 
             // List (4-20)
             html += '<div class="lb-list">';
-            ranked.slice(3, 20).forEach((r, i) => {
+            ranked.slice(3, 100).forEach((r, i) => {
                 const member = members.find(m => m.name === r.name);
                 const avatar = member && member.avatar
                     ? `<img src="${member.avatar}"/>`
