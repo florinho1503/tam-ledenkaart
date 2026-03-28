@@ -1183,13 +1183,36 @@
             return m ? m.name : null;
         }
 
+        let _hiddenPhotos = JSON.parse(localStorage.getItem('tam_hidden_photos') || '{}');
+
         function getHiddenPhotos() {
-            return JSON.parse(localStorage.getItem('tam_hidden_photos') || '[]');
+            const email = localStorage.getItem('tam_email') || '_anon';
+            // Migrate old array format to per-user object
+            if (Array.isArray(_hiddenPhotos)) {
+                _hiddenPhotos = { [email]: _hiddenPhotos };
+                localStorage.setItem('tam_hidden_photos', JSON.stringify(_hiddenPhotos));
+            }
+            return _hiddenPhotos[email] || [];
         }
 
         function setHiddenPhotos(list) {
-            localStorage.setItem('tam_hidden_photos', JSON.stringify(list));
+            const email = localStorage.getItem('tam_email') || '_anon';
+            if (Array.isArray(_hiddenPhotos)) _hiddenPhotos = {};
+            _hiddenPhotos[email] = list;
+            localStorage.setItem('tam_hidden_photos', JSON.stringify(_hiddenPhotos));
+            fetch(SYNC_URL + '/hidden_photos', {
+                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(_hiddenPhotos)
+            }).catch(() => {});
         }
+
+        // Load hidden photos from cloud
+        fetch(SYNC_URL + '/hidden_photos').then(r => r.json()).then(data => {
+            if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0) {
+                _hiddenPhotos = data;
+                localStorage.setItem('tam_hidden_photos', JSON.stringify(data));
+            }
+        }).catch(() => {});
 
         function photoKey(albumId, photo) {
             return albumId + '/' + photo;
