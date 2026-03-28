@@ -937,7 +937,7 @@
                     localStorage.setItem('tam_email', email);
                     loginScreen.classList.add('hidden');
                     // Track login
-                    fetch(SYNC_URL + '/logins', {
+                    fetch('https://tam-sync.tam-floris.workers.dev/logins', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ email })
