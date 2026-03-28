@@ -1545,42 +1545,27 @@
             }
         }
 
-        const EDITS_BLOB_ID = '019d3434-930f-7612-b422-012404ad035f';
-        const EDITS_BLOB_URL = `https://jsonblob.com/api/jsonBlob/${EDITS_BLOB_ID}`;
-        let _photoEditsCache = null;
-        let _photoEditsLoaded = false;
-
         function getPhotoEdits() {
-            if (_photoEditsCache) return _photoEditsCache;
-            // Fall back to localStorage until cloud data loads
             return JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
         }
 
         function savePhotoEdits(edits) {
-            _photoEditsCache = edits;
             localStorage.setItem('tam_photo_edits', JSON.stringify(edits));
-            // Sync to cloud
-            fetch(EDITS_BLOB_URL, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(edits)
-            }).catch(() => {});
+            // Rebuild any open popups so changes take effect immediately
+            refreshOpenPopups();
         }
 
-        // Load edits from cloud on startup
-        fetch(EDITS_BLOB_URL)
-            .then(r => r.json())
-            .then(data => {
-                if (data && typeof data === 'object') {
-                    // Merge cloud edits with local (cloud wins)
-                    const local = JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
-                    const merged = { ...local, ...data };
-                    _photoEditsCache = merged;
-                    localStorage.setItem('tam_photo_edits', JSON.stringify(merged));
-                    _photoEditsLoaded = true;
+        function refreshOpenPopups() {
+            allMarkerRefs.forEach(ref => {
+                if (ref.marker.getPopup() && ref.marker.getPopup().isOpen()) {
+                    const m = ref.data;
+                    ref.marker.closePopup();
+                    ref.marker.unbindPopup();
+                    ref.marker.bindPopup(buildPopup(m), {maxHeight: 300});
+                    ref.marker.openPopup();
                 }
-            })
-            .catch(() => {});
+            });
+        }
 
         function getPeopleForPhoto(src) {
             const edits = getPhotoEdits();
