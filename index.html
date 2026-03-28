@@ -1823,7 +1823,9 @@
         };
 
         window.switchTab = function(btn, tab) {
-            const container = btn.closest('.leaflet-popup-content') || btn.parentElement.parentElement;
+            // Scope to the nearest member detail (house) or popup content (standalone)
+            const container = btn.closest('.popup-member-detail') || btn.closest('.leaflet-popup-content');
+            if (!container) return;
             container.querySelectorAll('.popup-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             container.querySelectorAll('.popup-tab-content').forEach(c => c.style.display = 'none');
