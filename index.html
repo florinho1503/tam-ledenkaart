@@ -1507,7 +1507,7 @@
                 const icon = currentView === 'photo' ? makeGroupIcon(groupMembers) : purpleIcon;
                 const popupHtml = buildFoldedGroupPopup(groupMembers, group.name)
                     + `<div class="popup-ungroup"><button onclick="ungroupHouse(${JSON.stringify(group.members).replace(/"/g,'&quot;')})">Splits groep</button></div>`;
-                const marker = L.marker([m0.lat, m0.lon], { icon }).bindPopup(popupHtml, {minWidth: 280, maxWidth: 320, autoPan: false});
+                const marker = L.marker([m0.lat, m0.lon], { icon }).bindPopup(popupHtml, {minWidth: 280, maxWidth: 320, maxHeight: 400, autoPan: false});
                 markersGroup.addLayer(marker);
                 groupMembers.forEach(m => {
                     allMarkerRefs.push({ marker, name: m.name.toLowerCase(), data: m });
@@ -1944,9 +1944,24 @@
             }
             const detail = el.nextElementSibling;
             const arrow = el.querySelector('.fold-arrow');
-            detail.classList.toggle('open');
-            arrow.textContent = detail.classList.contains('open') ? '▾' : '▸';
-            if (detail.classList.contains('open')) {
+            const isOpening = !detail.classList.contains('open');
+
+            // Collapse all other members in this popup first
+            const popup = el.closest('.leaflet-popup-content');
+            if (popup) {
+                popup.querySelectorAll('.popup-member-detail.open').forEach(d => {
+                    d.classList.remove('open');
+                    const h = d.previousElementSibling;
+                    if (h) {
+                        const a = h.querySelector('.fold-arrow');
+                        if (a) a.textContent = '▸';
+                    }
+                });
+            }
+
+            if (isOpening) {
+                detail.classList.add('open');
+                arrow.textContent = '▾';
                 setTimeout(function() {
                     const scrollParent = el.closest('.leaflet-popup-content');
                     if (scrollParent) scrollParent.scrollTop = el.offsetTop - 10;
