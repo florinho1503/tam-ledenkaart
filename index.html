@@ -875,6 +875,7 @@
             </div>
             <div style="margin-top: 8px;">
                 <button class="filter-btn" id="groupModeBtn">Huizen beheren</button>
+                <button class="filter-btn" id="exportEditsBtn" style="display:none" onclick="exportPhotoEdits()">Export bewerkingen</button>
             </div>
         </div>
     </div>
@@ -1692,6 +1693,21 @@
             btn.textContent = origText;
             btn.disabled = false;
         };
+
+        window.exportPhotoEdits = function() {
+            const edits = getPhotoEdits();
+            const blob = new Blob([JSON.stringify(edits, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'photo_edits.json';
+            a.click();
+        };
+
+        // Show export button for admin
+        if (isAdmin()) {
+            const btn = document.getElementById('exportEditsBtn');
+            if (btn) btn.style.display = '';
+        }
 
         window.downloadLightboxPhoto = function() {
             const a = document.createElement('a');
