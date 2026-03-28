@@ -1067,7 +1067,7 @@
         }
 
         function buildPopupDetail(m) {
-            const photos = memberPhotos[m.name];
+            const photos = getPhotosForMember(m.name);
             const hasPhotos = photos && photos.length > 0;
 
             if (!hasPhotos) {
@@ -1179,8 +1179,43 @@
             return albumId + '/' + photo;
         }
 
+        function getPhotosForMember(name) {
+            // Start with static data, then apply edits
+            const base = memberPhotos[name] || [];
+            const edits = getPhotoEdits();
+            // Filter out photos where the member was removed via edits
+            let photos = base.filter(p => {
+                const src = `albums/${p.album_id}/${p.photo}`;
+                if (edits[src]) {
+                    return edits[src].includes(name);
+                }
+                return true;
+            });
+            // Add photos where the member was added via edits
+            for (const [src, people] of Object.entries(edits)) {
+                if (!people.includes(name)) continue;
+                // Check if already in the list
+                const already = photos.some(p => `albums/${p.album_id}/${p.photo}` === src);
+                if (!already) {
+                    const parts = src.replace('albums/', '').split('/', 1);
+                    if (parts.length === 2 || src.includes('/')) {
+                        const albumId = src.replace('albums/', '').split('/')[0];
+                        const photoName = src.replace(`albums/${albumId}/`, '');
+                        photos.push({
+                            album: `Album ${albumId}`,
+                            album_id: albumId,
+                            photo: photoName,
+                            similarity: 1.0,
+                            crop: null,
+                        });
+                    }
+                }
+            }
+            return photos;
+        }
+
         function buildPopupPhotos(m) {
-            const photos = memberPhotos[m.name];
+            const photos = getPhotosForMember(m.name);
             if (!photos || photos.length === 0) return '';
             // Sort by album_id descending (most recent first)
             const sorted = [...photos].sort((a, b) => parseInt(b.album_id) - parseInt(a.album_id));
@@ -1214,7 +1249,7 @@
         }
 
         function buildPopup(m) {
-            const photos = memberPhotos[m.name];
+            const photos = getPhotosForMember(m.name);
             const hasPhotos = photos && photos.length > 0;
 
             if (!hasPhotos) {
