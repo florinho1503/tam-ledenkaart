@@ -1368,9 +1368,12 @@
             // Sort by album_id descending (most recent first)
             const sorted = [...photos].sort((a, b) => parseInt(b.album_id) - parseInt(a.album_id));
             const isOwn = getLoggedInName() === m.name;
-            const hidden = getHiddenPhotos();
-            const visiblePhotos = isOwn ? sorted.filter(p => !hidden.includes(photoKey(p.album_id, p.photo))) : sorted;
-            const hiddenPhotos = isOwn ? sorted.filter(p => hidden.includes(photoKey(p.album_id, p.photo))) : [];
+            // Load hidden photos for the member being viewed (not the viewer)
+            const memberEmail = (members.find(x => x.name === m.name) || {}).email || '';
+            const allHidden = _hiddenPhotos || {};
+            const memberHidden = allHidden[memberEmail.toLowerCase()] || [];
+            const visiblePhotos = sorted.filter(p => !memberHidden.includes(photoKey(p.album_id, p.photo)));
+            const hiddenPhotos = sorted.filter(p => memberHidden.includes(photoKey(p.album_id, p.photo)));
 
             let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
             html += `<button class="popup-download-all-btn" onclick="downloadAllPhotos('${m.name.replace(/'/g, "\\'")}')">&#11015; Download alle (${visiblePhotos.length})</button>`;
