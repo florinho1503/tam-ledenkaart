@@ -1374,6 +1374,9 @@
             }
         });
 
+        // === Cloud sync ===
+        const SYNC_URL = 'https://tam-sync.tam-floris.workers.dev';
+
         // === House grouping ===
         let _houseGroups = null;
 
@@ -1572,8 +1575,6 @@
                 if (!photoToAlbum[key] && p.album) photoToAlbum[key] = p.album;
             }
         }
-
-        const SYNC_URL = 'https://tam-sync.tam-floris.workers.dev';
 
         // --- Cloud-synced data helpers ---
         let _photoEdits = JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
