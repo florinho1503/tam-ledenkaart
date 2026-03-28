@@ -158,8 +158,9 @@
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.85);
             z-index: 10000;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
@@ -167,12 +168,133 @@
         .photo-lightbox.open {
             display: flex;
         }
-        .photo-lightbox img {
+        .lightbox-toolbar {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 6px;
+            z-index: 10002;
+        }
+        .lightbox-toolbar button {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            backdrop-filter: blur(4px);
+        }
+        .lightbox-toolbar button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .lightbox-content {
+            position: relative;
             max-width: 90vw;
-            max-height: 90vh;
+            max-height: 85vh;
+        }
+        .lightbox-content img {
+            max-width: 90vw;
+            max-height: 85vh;
             border-radius: 12px;
             box-shadow: 0 4px 30px rgba(0,0,0,0.5);
             object-fit: contain;
+            cursor: default;
+        }
+        .photo-lightbox.tagging .lightbox-content img {
+            cursor: crosshair;
+        }
+        .lightbox-tags {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+        }
+        .lightbox-tag {
+            position: absolute;
+            border: 2px solid #6f3689;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        .lightbox-tag-label {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #6f3689;
+            color: white;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+        .tag-marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #6f3689;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            animation: tag-pulse 1s ease-in-out infinite;
+        }
+        @keyframes tag-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(111,54,137,0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(111,54,137,0); }
+        }
+        .tag-search {
+            position: absolute;
+            bottom: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            width: 280px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 10003;
+        }
+        .tag-search input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 6px;
+        }
+        .tag-search input:focus {
+            border-color: #6f3689;
+        }
+        .tag-results {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .tag-result {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tag-result:hover {
+            background: #f3e8fa;
+        }
+        .tag-result img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .tag-cancel {
+            width: 100%;
+            margin-top: 6px;
+            padding: 4px;
+            border: none;
+            background: #eee;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
         }
         .popup-tabs {
             display: flex;
@@ -668,8 +790,21 @@
         </div>
     </div>
     <div id="map"></div>
-    <div class="photo-lightbox" id="photoLightbox" onclick="this.classList.remove('open')">
-        <img id="lightboxImg" src="" alt="">
+    <div class="photo-lightbox" id="photoLightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-toolbar" onclick="event.stopPropagation()">
+            <button onclick="downloadLightboxPhoto()" title="Download">&#11015; Download</button>
+            <button onclick="startTagging()" title="Tag iemand" id="tagBtn">&#128100; Tag</button>
+            <button onclick="closeLightbox()" title="Sluiten">&#10005;</button>
+        </div>
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <img id="lightboxImg" src="" alt="" onclick="if(!document.getElementById('photoLightbox').classList.contains('tagging'))closeLightbox()">
+            <div class="lightbox-tags" id="lightboxTags"></div>
+        </div>
+        <div class="tag-search" id="tagSearch" style="display:none" onclick="event.stopPropagation()">
+            <input type="text" id="tagSearchInput" placeholder="Zoek een lid..." autocomplete="off">
+            <div class="tag-results" id="tagResults"></div>
+            <button class="tag-cancel" onclick="cancelTagging()">Annuleer</button>
+        </div>
     </div>
     <div class="info-box">
         <h2 id="infoToggle">TAM Ledenkaart <span class="toggle-icon">▾</span></h2>
@@ -1305,9 +1440,137 @@
                 currentFilter === 'active' ? `${count} actieve leden` : currentFilter === 'quotes' ? `${count} grappenmakers` : `${count} leden`;
         };
 
+        let currentLightboxSrc = '';
+        let tagClickPos = null;
+
+        function getManualTags() {
+            return JSON.parse(localStorage.getItem('tam_manual_tags') || '{}');
+        }
+
+        function saveManualTags(tags) {
+            localStorage.setItem('tam_manual_tags', JSON.stringify(tags));
+        }
+
+        function renderLightboxTags() {
+            const container = document.getElementById('lightboxTags');
+            container.innerHTML = '';
+            const tags = getManualTags();
+            const photoTags = tags[currentLightboxSrc] || [];
+            const img = document.getElementById('lightboxImg');
+            photoTags.forEach(t => {
+                const marker = document.createElement('div');
+                marker.className = 'lightbox-tag';
+                marker.style.left = (t.x * 100) + '%';
+                marker.style.top = (t.y * 100) + '%';
+                marker.style.width = '40px';
+                marker.style.height = '40px';
+                marker.style.transform = 'translate(-50%, -50%)';
+                const label = document.createElement('div');
+                label.className = 'lightbox-tag-label';
+                label.textContent = t.name;
+                marker.appendChild(label);
+                container.appendChild(marker);
+            });
+        }
+
         window.openLightbox = function(src) {
+            currentLightboxSrc = src;
+            const lb = document.getElementById('photoLightbox');
             document.getElementById('lightboxImg').src = src;
-            document.getElementById('photoLightbox').classList.add('open');
+            lb.classList.add('open');
+            lb.classList.remove('tagging');
+            document.getElementById('tagSearch').style.display = 'none';
+            renderLightboxTags();
+        };
+
+        window.closeLightbox = function(event) {
+            if (event && event.target !== document.getElementById('photoLightbox')) return;
+            const lb = document.getElementById('photoLightbox');
+            lb.classList.remove('open', 'tagging');
+            document.getElementById('tagSearch').style.display = 'none';
+        };
+
+        window.downloadLightboxPhoto = function() {
+            const a = document.createElement('a');
+            a.href = currentLightboxSrc;
+            a.download = currentLightboxSrc.split('/').pop();
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        window.startTagging = function() {
+            const lb = document.getElementById('photoLightbox');
+            if (lb.classList.contains('tagging')) {
+                cancelTagging();
+                return;
+            }
+            lb.classList.add('tagging');
+            const img = document.getElementById('lightboxImg');
+            img.onclick = function(e) {
+                const rect = img.getBoundingClientRect();
+                tagClickPos = {
+                    x: (e.clientX - rect.left) / rect.width,
+                    y: (e.clientY - rect.top) / rect.height
+                };
+                // Show marker
+                const tags = document.getElementById('lightboxTags');
+                let marker = tags.querySelector('.tag-marker');
+                if (!marker) {
+                    marker = document.createElement('div');
+                    marker.className = 'tag-marker';
+                    tags.appendChild(marker);
+                }
+                marker.style.left = (tagClickPos.x * 100) + '%';
+                marker.style.top = (tagClickPos.y * 100) + '%';
+
+                // Show search
+                const search = document.getElementById('tagSearch');
+                search.style.display = '';
+                const input = document.getElementById('tagSearchInput');
+                input.value = '';
+                input.focus();
+                updateTagResults('');
+            };
+        };
+
+        window.cancelTagging = function() {
+            const lb = document.getElementById('photoLightbox');
+            lb.classList.remove('tagging');
+            document.getElementById('tagSearch').style.display = 'none';
+            const marker = document.getElementById('lightboxTags').querySelector('.tag-marker');
+            if (marker) marker.remove();
+            const img = document.getElementById('lightboxImg');
+            img.onclick = function() { closeLightbox(); };
+            tagClickPos = null;
+        };
+
+        function updateTagResults(query) {
+            const results = document.getElementById('tagResults');
+            const q = query.toLowerCase();
+            const matches = members.filter(m => m.name.toLowerCase().includes(q)).slice(0, 8);
+            results.innerHTML = matches.map(m => {
+                const avatar = m.avatar ? `<img src="${m.avatar}"/>` : '';
+                return `<div class="tag-result" onclick="applyTag('${m.name.replace(/'/g, "\\'")}')">
+                    ${avatar}<span>${m.name}</span>
+                </div>`;
+            }).join('');
+        }
+
+        document.addEventListener('input', function(e) {
+            if (e.target.id === 'tagSearchInput') {
+                updateTagResults(e.target.value);
+            }
+        });
+
+        window.applyTag = function(name) {
+            if (!tagClickPos || !currentLightboxSrc) return;
+            const tags = getManualTags();
+            if (!tags[currentLightboxSrc]) tags[currentLightboxSrc] = [];
+            tags[currentLightboxSrc].push({ name, x: tagClickPos.x, y: tagClickPos.y });
+            saveManualTags(tags);
+            cancelTagging();
+            renderLightboxTags();
         };
 
         window.hidePhoto = function(key, memberName) {
