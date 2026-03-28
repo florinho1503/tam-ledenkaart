@@ -983,7 +983,7 @@
             <div class="filter-group">
                 <button class="filter-btn" data-filter="all">Iedereen</button>
                 <button class="filter-btn active" data-filter="active">Actieve leden</button>
-                <button class="filter-btn" data-filter="quotes">Grappenmakers</button>
+                <button class="filter-btn" data-filter="quotes">Gequote</button>
             </div>
             <div class="leaderboard" id="leaderboard">
                 <div class="leaderboard-title" onclick="document.getElementById('leaderboard').classList.toggle('expanded')">
@@ -1461,7 +1461,7 @@
 
             map.addLayer(markersGroup);
             document.getElementById('memberCount').textContent =
-                currentFilter === 'active' ? `${count} actieve leden` : currentFilter === 'quotes' ? `${count} grappenmakers` : `${count} leden`;
+                currentFilter === 'active' ? `${count} actieve leden` : currentFilter === 'quotes' ? `${count} gequote` : `${count} leden`;
         }
 
         // Filter buttons (Iedereen / Actieve leden)
@@ -1696,7 +1696,7 @@
 
             map.addLayer(markersGroup);
             document.getElementById('memberCount').textContent =
-                currentFilter === 'active' ? `${count} actieve leden` : currentFilter === 'quotes' ? `${count} grappenmakers` : `${count} leden`;
+                currentFilter === 'active' ? `${count} actieve leden` : currentFilter === 'quotes' ? `${count} gequote` : `${count} leden`;
         };
 
         let currentLightboxSrc = '';
