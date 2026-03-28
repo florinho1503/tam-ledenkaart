@@ -232,6 +232,39 @@
         .popup-photo-thumb:hover img {
             opacity: 0.8;
         }
+        .popup-photo-delete {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(231,76,60,0.85);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            line-height: 20px;
+            text-align: center;
+            padding: 0;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .popup-photo-thumb:hover .popup-photo-delete {
+            opacity: 1;
+        }
+        .popup-restore-btn {
+            background: #6f3689;
+            color: white;
+            border: none;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .popup-restore-btn:hover {
+            opacity: 0.8;
+        }
         .popup-photo-album {
             position: absolute;
             bottom: 0;
@@ -653,6 +686,7 @@
 
                 if (AUTH_HASHES.includes(hash)) {
                     localStorage.setItem('tam_auth', 'ok');
+                    localStorage.setItem('tam_email', email);
                     loginScreen.classList.add('hidden');
                 } else {
                     error.style.display = 'block';
@@ -835,15 +869,47 @@
             return html;
         }
 
+        function getLoggedInName() {
+            const email = localStorage.getItem('tam_email');
+            if (!email) return null;
+            const m = members.find(x => x.email && x.email.toLowerCase() === email);
+            return m ? m.name : null;
+        }
+
+        function getHiddenPhotos() {
+            return JSON.parse(localStorage.getItem('tam_hidden_photos') || '[]');
+        }
+
+        function setHiddenPhotos(list) {
+            localStorage.setItem('tam_hidden_photos', JSON.stringify(list));
+        }
+
+        function photoKey(albumId, photo) {
+            return albumId + '/' + photo;
+        }
+
         function buildPopupPhotos(m) {
             const photos = memberPhotos[m.name];
             if (!photos || photos.length === 0) return '';
-            let html = '<div class="popup-photo-grid">';
-            photos.forEach(p => {
+            const isOwn = getLoggedInName() === m.name;
+            const hidden = getHiddenPhotos();
+            const visiblePhotos = isOwn ? photos.filter(p => !hidden.includes(photoKey(p.album_id, p.photo))) : photos;
+            const hiddenPhotos = isOwn ? photos.filter(p => hidden.includes(photoKey(p.album_id, p.photo))) : [];
+
+            let html = '';
+            if (isOwn && hidden.length > 0) {
+                html += `<div style="text-align:right;margin-bottom:6px;"><button class="popup-restore-btn" onclick="restoreAllPhotos()">Herstel alle foto\'s (${hiddenPhotos.length})</button></div>`;
+            }
+            html += '<div class="popup-photo-grid">';
+            visiblePhotos.forEach(p => {
                 const fullSrc = `albums/${p.album_id}/${p.photo}`;
-                html += `<div class="popup-photo-thumb" onclick="openLightbox('${fullSrc}')">`;
-                html += `<img src="${fullSrc}" alt="${p.album}"/>`;
+                const key = photoKey(p.album_id, p.photo);
+                html += `<div class="popup-photo-thumb">`;
+                html += `<img src="${fullSrc}" alt="${p.album}" onclick="openLightbox('${fullSrc}')"/>`;
                 html += `<div class="popup-photo-album">${p.album}</div>`;
+                if (isOwn) {
+                    html += `<button class="popup-photo-delete" onclick="event.stopPropagation();hidePhoto('${key}','${m.name}')" title="Verberg foto">&#10005;</button>`;
+                }
                 html += `</div>`;
             });
             html += '</div>';
@@ -1145,6 +1211,57 @@
         window.openLightbox = function(src) {
             document.getElementById('lightboxImg').src = src;
             document.getElementById('photoLightbox').classList.add('open');
+        };
+
+        window.hidePhoto = function(key, memberName) {
+            const hidden = getHiddenPhotos();
+            if (!hidden.includes(key)) {
+                hidden.push(key);
+                setHiddenPhotos(hidden);
+            }
+            // Re-open the popup to refresh
+            const member = members.find(m => m.name === memberName);
+            if (member) {
+                const ref = allMarkerRefs.find(r => r.name === memberName.toLowerCase());
+                if (ref) {
+                    ref.marker.closePopup();
+                    ref.marker.unbindPopup();
+                    ref.marker.bindPopup(buildPopup(member), {maxHeight: 300});
+                    ref.marker.openPopup();
+                    // Switch to photos tab
+                    setTimeout(() => {
+                        const popup = ref.marker.getPopup();
+                        if (popup) {
+                            const el = popup.getElement();
+                            const photosBtn = el ? el.querySelector('.popup-tab:last-child') : null;
+                            if (photosBtn) photosBtn.click();
+                        }
+                    }, 50);
+                }
+            }
+        };
+
+        window.restoreAllPhotos = function() {
+            setHiddenPhotos([]);
+            const memberName = getLoggedInName();
+            if (memberName) {
+                const member = members.find(m => m.name === memberName);
+                const ref = allMarkerRefs.find(r => r.name === memberName.toLowerCase());
+                if (ref && member) {
+                    ref.marker.closePopup();
+                    ref.marker.unbindPopup();
+                    ref.marker.bindPopup(buildPopup(member), {maxHeight: 300});
+                    ref.marker.openPopup();
+                    setTimeout(() => {
+                        const popup = ref.marker.getPopup();
+                        if (popup) {
+                            const el = popup.getElement();
+                            const photosBtn = el ? el.querySelector('.popup-tab:last-child') : null;
+                            if (photosBtn) photosBtn.click();
+                        }
+                    }, 50);
+                }
+            }
         };
 
         window.switchTab = function(btn, tab) {
