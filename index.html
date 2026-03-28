@@ -1376,6 +1376,7 @@
 
         // === Cloud sync ===
         const SYNC_URL = 'https://tam-sync.tam-floris.workers.dev';
+        let _photoEdits = JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
 
         // === House grouping ===
         let _houseGroups = null;
@@ -1577,8 +1578,6 @@
         }
 
         // --- Cloud-synced data helpers ---
-        let _photoEdits = JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
-
         function getPhotoEdits() { return _photoEdits; }
 
 
