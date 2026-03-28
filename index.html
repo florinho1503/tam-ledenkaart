@@ -1375,17 +1375,34 @@
         });
 
         // === House grouping ===
+        let _houseGroups = null;
+
         function getHouseGroups() {
+            if (_houseGroups) return _houseGroups;
             try {
                 const raw = JSON.parse(localStorage.getItem('tam_house_groups') || '[]');
-                // Migrate old format (array of arrays) to new (array of objects)
-                return raw.map(g => Array.isArray(g) ? { name: '', members: g } : g);
+                _houseGroups = raw.map(g => Array.isArray(g) ? { name: '', members: g } : g);
+                return _houseGroups;
             }
             catch { return []; }
         }
         function saveHouseGroups(groups) {
+            _houseGroups = groups;
             localStorage.setItem('tam_house_groups', JSON.stringify(groups));
+            fetch(SYNC_URL + '/house_groups', {
+                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(groups)
+            }).catch(() => {});
         }
+
+        // Load house groups from cloud on startup
+        fetch(SYNC_URL + '/house_groups').then(r => r.json()).then(groups => {
+            if (groups && Array.isArray(groups) && groups.length > 0) {
+                _houseGroups = groups;
+                localStorage.setItem('tam_house_groups', JSON.stringify(groups));
+                renderMarkers();
+            }
+        }).catch(() => {});
 
         let groupMode = false;
         let selectedForGroup = [];
