@@ -1022,7 +1022,7 @@
 
         (async function() {
             const loginScreen = document.getElementById('login-screen');
-            if (localStorage.getItem('tam_auth') === 'ok') {
+            if (localStorage.getItem('tam_auth') === 'ok' && localStorage.getItem('tam_email')) {
                 loginScreen.classList.add('hidden');
                 return;
             }
