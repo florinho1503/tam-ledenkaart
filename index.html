@@ -89,6 +89,45 @@
             color: #6f3689;
             margin-bottom: 4px;
         }
+        .nickname {
+            font-style: italic;
+            color: #e67e22;
+            font-weight: 600;
+        }
+        .nickname-edit {
+            cursor: pointer;
+            font-size: 12px;
+            color: #aaa;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .nickname-edit:hover {
+            color: #6f3689;
+        }
+        .nickname-input-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 4px;
+        }
+        .nickname-input-wrap input {
+            width: 80px;
+            padding: 1px 4px;
+            border: 1px solid #6f3689;
+            border-radius: 4px;
+            font-size: 12px;
+            font-style: italic;
+            outline: none;
+        }
+        .nickname-input-wrap button {
+            border: none;
+            background: #6f3689;
+            color: white;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
         .popup-phone {
             font-size: 14px;
             margin-top: 2px;
@@ -1039,7 +1078,7 @@
                 const photoBadge = photoCount > 0 ? `<span class="photo-badge">${photoCount}</span>` : '';
                 html += `<div class="popup-member-header" onclick="toggleMember(this, event)">
                     ${avatar}
-                    <span class="member-name">${m.name}${photoBadge}</span>
+                    <span class="member-name">${displayName(m.name)}${photoBadge}</span>
                     <span class="fold-arrow">▸</span>
                 </div>`;
                 html += `<div class="popup-member-detail">${buildPopupDetail(m)}</div>`;
@@ -1120,7 +1159,7 @@
             if (m.avatar) {
                 html += `<div class="popup-avatar"><img src="${m.avatar}" alt="${m.name}" onclick="openLightbox(this.src)"/></div>`;
             }
-            html += `<div class="popup-name">${m.name}</div>`;
+            html += `<div class="popup-name">${nameWithNicknameEdit(m.name)}</div>`;
             html += `<div class="popup-address">${m.street}, ${m.postcode} ${m.city}</div>`;
             html += `<div class="popup-phone"><a href="tel:${m.phone}">&#128222; ${m.phone}</a></div>`;
             if (m.commissies && m.commissies.length > 0) {
@@ -1577,6 +1616,67 @@
             return (localStorage.getItem('tam_email') || '').toLowerCase() === 'florisbokx@gmail.com';
         }
 
+        function getNicknames() {
+            return JSON.parse(localStorage.getItem('tam_nicknames') || '{}');
+        }
+
+        function saveNicknames(nicks) {
+            localStorage.setItem('tam_nicknames', JSON.stringify(nicks));
+        }
+
+        function displayName(name) {
+            const nick = getNicknames()[name];
+            if (!nick) return name;
+            const parts = name.split(' ');
+            const first = parts[0];
+            const rest = parts.slice(1).join(' ');
+            return `${first} <span class="nickname">"${nick}"</span> ${rest}`;
+        }
+
+        function canEditNickname(memberName) {
+            if (isAdmin()) return true;
+            return getLoggedInName() === memberName;
+        }
+
+        function nameWithNicknameEdit(name) {
+            let html = displayName(name);
+            if (canEditNickname(name)) {
+                html += `<span class="nickname-edit" onclick="event.stopPropagation();editNickname(this, '${name.replace(/'/g, "\\'")}')">&#9998;</span>`;
+            }
+            return html;
+        }
+
+        window.editNickname = function(el, name) {
+            const parent = el.parentElement;
+            const current = getNicknames()[name] || '';
+            const wrap = document.createElement('span');
+            wrap.className = 'nickname-input-wrap';
+            wrap.innerHTML = `<input type="text" value="${current}" placeholder="bijnaam" maxlength="20">
+                <button onclick="saveNickname('${name.replace(/'/g, "\\'")}', this)">&#10003;</button>`;
+            wrap.querySelector('input').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') wrap.querySelector('button').click();
+                if (e.key === 'Escape') { parent.innerHTML = nameWithNicknameEdit(name); }
+            });
+            parent.innerHTML = '';
+            parent.appendChild(document.createTextNode(name.split(' ')[0] + ' '));
+            parent.appendChild(wrap);
+            parent.appendChild(document.createTextNode(' ' + name.split(' ').slice(1).join(' ')));
+            wrap.querySelector('input').focus();
+        };
+
+        window.saveNickname = function(name, btn) {
+            const input = btn.previousElementSibling;
+            const nick = input.value.trim();
+            const nicks = getNicknames();
+            if (nick) {
+                nicks[name] = nick;
+            } else {
+                delete nicks[name];
+            }
+            saveNicknames(nicks);
+            refreshOpenPopups();
+        };
+
         function renderLightboxPeople() {
             const container = document.getElementById('lightboxPeople');
             container.innerHTML = '';
@@ -1587,11 +1687,12 @@
                 const member = members.find(m => m.name === name);
                 const el = document.createElement('div');
                 el.className = 'lightbox-person';
+                const dn = displayName(name);
                 if (member && member.avatar) {
-                    el.innerHTML = `<img src="${member.avatar}"/>${name}`;
+                    el.innerHTML = `<img src="${member.avatar}"/>${dn}`;
                 } else {
                     const initials = name.split(' ').map(w => w[0]).join('');
-                    el.innerHTML = `<div class="lp-initials">${initials}</div>${name}`;
+                    el.innerHTML = `<div class="lp-initials">${initials}</div>${dn}`;
                 }
                 if (admin) {
                     const del = document.createElement('span');
