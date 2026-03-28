@@ -796,7 +796,7 @@
             <button onclick="startTagging()" title="Tag iemand" id="tagBtn">&#128100; Tag</button>
             <button onclick="closeLightbox()" title="Sluiten">&#10005;</button>
         </div>
-        <div class="lightbox-content">
+        <div class="lightbox-content" onclick="handleLightboxContentClick(event)">
             <img id="lightboxImg" src="" alt="">
             <div class="lightbox-tags" id="lightboxTags"></div>
         </div>
@@ -1473,18 +1473,16 @@
             });
         }
 
-        // Click handler for tagging - on the content div to catch all clicks
-        document.querySelector('.lightbox-content').addEventListener('click', function(e) {
+        window.handleLightboxContentClick = function(e) {
+            e.stopPropagation();
             const lb = document.getElementById('photoLightbox');
             if (!lb.classList.contains('tagging')) return;
-            e.stopPropagation();
             const img = document.getElementById('lightboxImg');
             const rect = img.getBoundingClientRect();
             tagClickPos = {
                 x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
                 y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
             };
-            // Show marker
             const tags = document.getElementById('lightboxTags');
             let marker = tags.querySelector('.tag-marker');
             if (!marker) {
@@ -1494,13 +1492,12 @@
             }
             marker.style.left = (tagClickPos.x * 100) + '%';
             marker.style.top = (tagClickPos.y * 100) + '%';
-            // Show search
             document.getElementById('tagSearch').style.display = '';
             const input = document.getElementById('tagSearchInput');
             input.value = '';
             input.focus();
             updateTagResults('');
-        });
+        };
 
         window.openLightbox = function(src) {
             currentLightboxSrc = src;
