@@ -257,6 +257,61 @@
         .lightbox-people:empty {
             display: none;
         }
+        .lp-delete {
+            margin-left: 2px;
+            cursor: pointer;
+            color: #999;
+            font-size: 14px;
+            line-height: 1;
+        }
+        .lp-delete:hover {
+            color: #e74c3c;
+        }
+        .lp-add {
+            background: #6f3689;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+        }
+        .lp-add:hover {
+            opacity: 0.8;
+        }
+        .lp-search-wrap {
+            width: 100%;
+            margin-top: 4px;
+        }
+        .lp-search-input {
+            width: 100%;
+            padding: 4px 8px;
+            border: 2px solid #6f3689;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+        .lp-search-results {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .lp-search-result {
+            padding: 4px 6px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lp-search-result:hover {
+            background: #f3e8fa;
+        }
+        .lp-search-result img {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
         .lightbox-person {
             display: flex;
             align-items: center;
@@ -1431,10 +1486,30 @@
             }
         }
 
+        function getPhotoEdits() {
+            return JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
+        }
+
+        function savePhotoEdits(edits) {
+            localStorage.setItem('tam_photo_edits', JSON.stringify(edits));
+        }
+
+        function getPeopleForPhoto(src) {
+            const edits = getPhotoEdits();
+            if (edits[src]) return edits[src];
+            return photoToMembers[src] || [];
+        }
+
+        function isAdmin() {
+            return (localStorage.getItem('tam_email') || '').toLowerCase() === 'florisbokx@gmail.com';
+        }
+
         function renderLightboxPeople() {
             const container = document.getElementById('lightboxPeople');
             container.innerHTML = '';
-            const people = photoToMembers[currentLightboxSrc] || [];
+            const people = getPeopleForPhoto(currentLightboxSrc);
+            const admin = isAdmin();
+
             people.forEach(name => {
                 const member = members.find(m => m.name === name);
                 const el = document.createElement('div');
@@ -1445,7 +1520,68 @@
                     const initials = name.split(' ').map(w => w[0]).join('');
                     el.innerHTML = `<div class="lp-initials">${initials}</div>${name}`;
                 }
+                if (admin) {
+                    const del = document.createElement('span');
+                    del.className = 'lp-delete';
+                    del.textContent = '\u00d7';
+                    del.onclick = function(e) {
+                        e.stopPropagation();
+                        const edits = getPhotoEdits();
+                        const current = edits[currentLightboxSrc] || [...people];
+                        edits[currentLightboxSrc] = current.filter(n => n !== name);
+                        savePhotoEdits(edits);
+                        renderLightboxPeople();
+                    };
+                    el.appendChild(del);
+                }
                 container.appendChild(el);
+            });
+
+            if (admin) {
+                const addBtn = document.createElement('div');
+                addBtn.className = 'lightbox-person lp-add';
+                addBtn.textContent = '+ Tag';
+                addBtn.onclick = function() {
+                    showAddPersonSearch();
+                };
+                container.appendChild(addBtn);
+            }
+        }
+
+        function showAddPersonSearch() {
+            const container = document.getElementById('lightboxPeople');
+            // Remove existing search if any
+            const existing = container.querySelector('.lp-search-wrap');
+            if (existing) { existing.remove(); return; }
+
+            const wrap = document.createElement('div');
+            wrap.className = 'lp-search-wrap';
+            wrap.onclick = function(e) { e.stopPropagation(); };
+            wrap.innerHTML = `<input type="text" class="lp-search-input" placeholder="Zoek een lid..." autocomplete="off">
+                <div class="lp-search-results"></div>`;
+            container.appendChild(wrap);
+            const input = wrap.querySelector('input');
+            const results = wrap.querySelector('.lp-search-results');
+            input.focus();
+            input.addEventListener('input', function() {
+                const q = this.value.toLowerCase();
+                if (q.length < 1) { results.innerHTML = ''; return; }
+                const currentPeople = getPeopleForPhoto(currentLightboxSrc);
+                const matches = members.filter(m => m.name.toLowerCase().includes(q) && !currentPeople.includes(m.name)).slice(0, 6);
+                results.innerHTML = matches.map(m => {
+                    const avatar = m.avatar ? `<img src="${m.avatar}"/>` : '';
+                    return `<div class="lp-search-result">${avatar}<span>${m.name}</span></div>`;
+                }).join('');
+                results.querySelectorAll('.lp-search-result').forEach((el, i) => {
+                    el.onclick = function() {
+                        const edits = getPhotoEdits();
+                        const current = edits[currentLightboxSrc] || [...(photoToMembers[currentLightboxSrc] || [])];
+                        current.push(matches[i].name);
+                        edits[currentLightboxSrc] = current;
+                        savePhotoEdits(edits);
+                        renderLightboxPeople();
+                    };
+                });
             });
         }
 
