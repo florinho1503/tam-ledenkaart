@@ -939,8 +939,8 @@
                 });
                 html += `</div>`;
             }
-            // Best friends (only for own profile)
-            if (getLoggedInName() === m.name) {
+            // Best friends
+            {
                 const bfs = getBestFriends(m.name, 3);
                 if (bfs.length > 0) {
                     const medals = ['&#129351;', '&#129352;', '&#129353;'];
