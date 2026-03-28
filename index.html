@@ -1584,15 +1584,49 @@
             }
         }
 
-        function getPhotoEdits() {
-            return JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
-        }
+        const SYNC_URL = 'https://tam-sync.tam-floris.workers.dev';
+
+        // --- Cloud-synced data helpers ---
+        let _photoEdits = JSON.parse(localStorage.getItem('tam_photo_edits') || '{}');
+        let _nicknames = JSON.parse(localStorage.getItem('tam_nicknames') || '{}');
+
+        function getPhotoEdits() { return _photoEdits; }
+        function getNicknames() { return _nicknames; }
 
         function savePhotoEdits(edits) {
+            _photoEdits = edits;
             localStorage.setItem('tam_photo_edits', JSON.stringify(edits));
-            // Rebuild any open popups so changes take effect immediately
+            fetch(SYNC_URL + '/photo_edits', {
+                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(edits)
+            }).catch(() => {});
             refreshOpenPopups();
         }
+
+        function saveNicknames(nicks) {
+            _nicknames = nicks;
+            localStorage.setItem('tam_nicknames', JSON.stringify(nicks));
+            fetch(SYNC_URL + '/nicknames', {
+                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(nicks)
+            }).catch(() => {});
+            refreshOpenPopups();
+        }
+
+        // Load from cloud on startup (cloud wins over local)
+        Promise.all([
+            fetch(SYNC_URL + '/photo_edits').then(r => r.json()).catch(() => null),
+            fetch(SYNC_URL + '/nicknames').then(r => r.json()).catch(() => null),
+        ]).then(([edits, nicks]) => {
+            if (edits && Object.keys(edits).length > 0) {
+                _photoEdits = edits;
+                localStorage.setItem('tam_photo_edits', JSON.stringify(edits));
+            }
+            if (nicks && Object.keys(nicks).length > 0) {
+                _nicknames = nicks;
+                localStorage.setItem('tam_nicknames', JSON.stringify(nicks));
+            }
+        });
 
         function refreshOpenPopups() {
             allMarkerRefs.forEach(ref => {
@@ -1614,14 +1648,6 @@
 
         function isAdmin() {
             return (localStorage.getItem('tam_email') || '').toLowerCase() === 'florisbokx@gmail.com';
-        }
-
-        function getNicknames() {
-            return JSON.parse(localStorage.getItem('tam_nicknames') || '{}');
-        }
-
-        function saveNicknames(nicks) {
-            localStorage.setItem('tam_nicknames', JSON.stringify(nicks));
         }
 
         function displayName(name) {
