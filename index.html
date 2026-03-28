@@ -797,7 +797,7 @@
             <button onclick="closeLightbox()" title="Sluiten">&#10005;</button>
         </div>
         <div class="lightbox-content" onclick="event.stopPropagation()">
-            <img id="lightboxImg" src="" alt="" onclick="if(!document.getElementById('photoLightbox').classList.contains('tagging'))closeLightbox()">
+            <img id="lightboxImg" src="" alt="" id="lightboxImg">
             <div class="lightbox-tags" id="lightboxTags"></div>
         </div>
         <div class="tag-search" id="tagSearch" style="display:none" onclick="event.stopPropagation()">
@@ -1473,6 +1473,36 @@
             });
         }
 
+        // Single click handler for the lightbox image
+        document.getElementById('lightboxImg').addEventListener('click', function(e) {
+            const lb = document.getElementById('photoLightbox');
+            if (lb.classList.contains('tagging')) {
+                // Tagging mode: register click position
+                const rect = this.getBoundingClientRect();
+                tagClickPos = {
+                    x: (e.clientX - rect.left) / rect.width,
+                    y: (e.clientY - rect.top) / rect.height
+                };
+                // Show marker
+                const tags = document.getElementById('lightboxTags');
+                let marker = tags.querySelector('.tag-marker');
+                if (!marker) {
+                    marker = document.createElement('div');
+                    marker.className = 'tag-marker';
+                    tags.appendChild(marker);
+                }
+                marker.style.left = (tagClickPos.x * 100) + '%';
+                marker.style.top = (tagClickPos.y * 100) + '%';
+                // Show search
+                const search = document.getElementById('tagSearch');
+                search.style.display = '';
+                const input = document.getElementById('tagSearchInput');
+                input.value = '';
+                input.focus();
+                updateTagResults('');
+            }
+        });
+
         window.openLightbox = function(src) {
             currentLightboxSrc = src;
             const lb = document.getElementById('photoLightbox');
@@ -1506,32 +1536,6 @@
                 return;
             }
             lb.classList.add('tagging');
-            const img = document.getElementById('lightboxImg');
-            img.onclick = function(e) {
-                const rect = img.getBoundingClientRect();
-                tagClickPos = {
-                    x: (e.clientX - rect.left) / rect.width,
-                    y: (e.clientY - rect.top) / rect.height
-                };
-                // Show marker
-                const tags = document.getElementById('lightboxTags');
-                let marker = tags.querySelector('.tag-marker');
-                if (!marker) {
-                    marker = document.createElement('div');
-                    marker.className = 'tag-marker';
-                    tags.appendChild(marker);
-                }
-                marker.style.left = (tagClickPos.x * 100) + '%';
-                marker.style.top = (tagClickPos.y * 100) + '%';
-
-                // Show search
-                const search = document.getElementById('tagSearch');
-                search.style.display = '';
-                const input = document.getElementById('tagSearchInput');
-                input.value = '';
-                input.focus();
-                updateTagResults('');
-            };
         };
 
         window.cancelTagging = function() {
@@ -1540,8 +1544,6 @@
             document.getElementById('tagSearch').style.display = 'none';
             const marker = document.getElementById('lightboxTags').querySelector('.tag-marker');
             if (marker) marker.remove();
-            const img = document.getElementById('lightboxImg');
-            img.onclick = function() { closeLightbox(); };
             tagClickPos = null;
         };
 
