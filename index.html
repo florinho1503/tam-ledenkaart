@@ -254,6 +254,15 @@
             width: 100%;
             min-height: 36px;
         }
+        .lightbox-album-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6f3689;
+            margin-right: 8px;
+            padding-right: 8px;
+            border-right: 2px solid #e0d0ea;
+            white-space: nowrap;
+        }
         .lightbox-people:empty {
             display: none;
         }
@@ -1535,13 +1544,15 @@
         let lightboxPhotoList = [];
         let lightboxPhotoIdx = 0;
 
-        // Build reverse index: photo path -> list of member names
+        // Build reverse indexes
         const photoToMembers = {};
+        const photoToAlbum = {};
         for (const [name, photos] of Object.entries(memberPhotos)) {
             for (const p of photos) {
                 const key = `albums/${p.album_id}/${p.photo}`;
                 if (!photoToMembers[key]) photoToMembers[key] = [];
                 if (!photoToMembers[key].includes(name)) photoToMembers[key].push(name);
+                if (!photoToAlbum[key] && p.album) photoToAlbum[key] = p.album;
             }
         }
 
@@ -1600,6 +1611,16 @@
         function renderLightboxPeople() {
             const container = document.getElementById('lightboxPeople');
             container.innerHTML = '';
+
+            // Show album name
+            const albumName = photoToAlbum[currentLightboxSrc];
+            if (albumName) {
+                const label = document.createElement('div');
+                label.className = 'lightbox-album-name';
+                label.textContent = albumName;
+                container.appendChild(label);
+            }
+
             const people = getPeopleForPhoto(currentLightboxSrc);
             const admin = isAdmin();
 
