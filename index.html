@@ -1667,7 +1667,8 @@
                 container.appendChild(label);
             }
 
-            const people = getPeopleForPhoto(currentLightboxSrc);
+            const isAlbumPhoto = currentLightboxSrc.startsWith('albums/');
+            const people = isAlbumPhoto ? getPeopleForPhoto(currentLightboxSrc) : [];
             const admin = isAdmin();
 
             people.forEach(name => {
@@ -1697,7 +1698,7 @@
                 container.appendChild(el);
             });
 
-            if (admin) {
+            if (admin && currentLightboxSrc.startsWith('albums/')) {
                 const addBtn = document.createElement('div');
                 addBtn.className = 'lightbox-person lp-add';
                 addBtn.textContent = '+ Tag';
