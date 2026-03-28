@@ -790,13 +790,13 @@
         </div>
     </div>
     <div id="map"></div>
-    <div class="photo-lightbox" id="photoLightbox" onclick="closeLightbox(event)">
+    <div class="photo-lightbox" id="photoLightbox">
         <div class="lightbox-toolbar" onclick="event.stopPropagation()">
             <button onclick="downloadLightboxPhoto()" title="Download">&#11015; Download</button>
             <button onclick="startTagging()" title="Tag iemand" id="tagBtn">&#128100; Tag</button>
             <button onclick="closeLightbox()" title="Sluiten">&#10005;</button>
         </div>
-        <div class="lightbox-content" onclick="event.stopPropagation()">
+        <div class="lightbox-content">
             <img id="lightboxImg" src="" alt="">
             <div class="lightbox-tags" id="lightboxTags"></div>
         </div>
@@ -1473,34 +1473,33 @@
             });
         }
 
-        // Single click handler for the lightbox image
-        document.getElementById('lightboxImg').addEventListener('click', function(e) {
+        // Click handler for tagging - on the content div to catch all clicks
+        document.querySelector('.lightbox-content').addEventListener('click', function(e) {
             const lb = document.getElementById('photoLightbox');
-            if (lb.classList.contains('tagging')) {
-                // Tagging mode: register click position
-                const rect = this.getBoundingClientRect();
-                tagClickPos = {
-                    x: (e.clientX - rect.left) / rect.width,
-                    y: (e.clientY - rect.top) / rect.height
-                };
-                // Show marker
-                const tags = document.getElementById('lightboxTags');
-                let marker = tags.querySelector('.tag-marker');
-                if (!marker) {
-                    marker = document.createElement('div');
-                    marker.className = 'tag-marker';
-                    tags.appendChild(marker);
-                }
-                marker.style.left = (tagClickPos.x * 100) + '%';
-                marker.style.top = (tagClickPos.y * 100) + '%';
-                // Show search
-                const search = document.getElementById('tagSearch');
-                search.style.display = '';
-                const input = document.getElementById('tagSearchInput');
-                input.value = '';
-                input.focus();
-                updateTagResults('');
+            if (!lb.classList.contains('tagging')) return;
+            e.stopPropagation();
+            const img = document.getElementById('lightboxImg');
+            const rect = img.getBoundingClientRect();
+            tagClickPos = {
+                x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+                y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
+            };
+            // Show marker
+            const tags = document.getElementById('lightboxTags');
+            let marker = tags.querySelector('.tag-marker');
+            if (!marker) {
+                marker = document.createElement('div');
+                marker.className = 'tag-marker';
+                tags.appendChild(marker);
             }
+            marker.style.left = (tagClickPos.x * 100) + '%';
+            marker.style.top = (tagClickPos.y * 100) + '%';
+            // Show search
+            document.getElementById('tagSearch').style.display = '';
+            const input = document.getElementById('tagSearchInput');
+            input.value = '';
+            input.focus();
+            updateTagResults('');
         });
 
         window.openLightbox = function(src) {
@@ -1513,12 +1512,16 @@
             renderLightboxTags();
         };
 
-        window.closeLightbox = function(event) {
-            if (event && event.target !== document.getElementById('photoLightbox')) return;
+        window.closeLightbox = function() {
             const lb = document.getElementById('photoLightbox');
             lb.classList.remove('open', 'tagging');
             document.getElementById('tagSearch').style.display = 'none';
         };
+
+        // Close lightbox when clicking the dark background (not content)
+        document.getElementById('photoLightbox').addEventListener('click', function(e) {
+            if (e.target === this) closeLightbox();
+        });
 
         window.downloadLightboxPhoto = function() {
             const a = document.createElement('a');
