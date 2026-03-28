@@ -253,6 +253,60 @@
         .popup-photo-thumb:hover .popup-photo-delete {
             opacity: 1;
         }
+        .popup-bestfriends {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 2px solid #f3e8fa;
+        }
+        .popup-bestfriends-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6f3689;
+            margin-bottom: 6px;
+        }
+        .popup-bf {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .bf-medal {
+            font-size: 18px;
+            width: 22px;
+            text-align: center;
+        }
+        .bf-avatar {
+            flex-shrink: 0;
+        }
+        .bf-avatar img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #6f3689;
+        }
+        .bf-initials {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #6f3689;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .bf-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+        }
+        .bf-count {
+            font-size: 11px;
+            color: #888;
+            margin-left: auto;
+        }
         .popup-restore-btn {
             background: #6f3689;
             color: white;
@@ -846,6 +900,25 @@
         let markersGroup = null;
         const allMarkerRefs = [];
 
+        function getBestFriends(name, top) {
+            const myPhotos = memberPhotos[name];
+            if (!myPhotos) return [];
+            const myKeys = new Set(myPhotos.map(p => p.album_id + '/' + p.photo));
+            const counts = {};
+            for (const [other, photos] of Object.entries(memberPhotos)) {
+                if (other === name) continue;
+                let shared = 0;
+                for (const p of photos) {
+                    if (myKeys.has(p.album_id + '/' + p.photo)) shared++;
+                }
+                if (shared > 0) counts[other] = shared;
+            }
+            return Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, top)
+                .map(([n, c]) => ({ name: n, count: c }));
+        }
+
         function buildPopupInfo(m) {
             let html = '';
             if (m.avatar) {
@@ -865,6 +938,28 @@
                     html += `<div class="edition">${q.edition}</div></div>`;
                 });
                 html += `</div>`;
+            }
+            // Best friends (only for own profile)
+            if (getLoggedInName() === m.name) {
+                const bfs = getBestFriends(m.name, 3);
+                if (bfs.length > 0) {
+                    const medals = ['&#129351;', '&#129352;', '&#129353;'];
+                    html += `<div class="popup-bestfriends">`;
+                    html += `<div class="popup-bestfriends-title">Best friends</div>`;
+                    bfs.forEach((bf, i) => {
+                        const member = members.find(x => x.name === bf.name);
+                        const avatar = member && member.avatar
+                            ? `<img src="${member.avatar}" alt="${bf.name}"/>`
+                            : `<div class="bf-initials">${bf.name.split(' ').map(w=>w[0]).join('')}</div>`;
+                        html += `<div class="popup-bf">`;
+                        html += `<span class="bf-medal">${medals[i] || ''}</span>`;
+                        html += `<div class="bf-avatar">${avatar}</div>`;
+                        html += `<span class="bf-name">${bf.name}</span>`;
+                        html += `<span class="bf-count">${bf.count} foto\'s</span>`;
+                        html += `</div>`;
+                    });
+                    html += `</div>`;
+                }
             }
             return html;
         }
@@ -891,10 +986,12 @@
         function buildPopupPhotos(m) {
             const photos = memberPhotos[m.name];
             if (!photos || photos.length === 0) return '';
+            // Sort by album_id descending (most recent first)
+            const sorted = [...photos].sort((a, b) => parseInt(b.album_id) - parseInt(a.album_id));
             const isOwn = getLoggedInName() === m.name;
             const hidden = getHiddenPhotos();
-            const visiblePhotos = isOwn ? photos.filter(p => !hidden.includes(photoKey(p.album_id, p.photo))) : photos;
-            const hiddenPhotos = isOwn ? photos.filter(p => hidden.includes(photoKey(p.album_id, p.photo))) : [];
+            const visiblePhotos = isOwn ? sorted.filter(p => !hidden.includes(photoKey(p.album_id, p.photo))) : sorted;
+            const hiddenPhotos = isOwn ? sorted.filter(p => hidden.includes(photoKey(p.album_id, p.photo))) : [];
 
             let html = '';
             if (isOwn && hidden.length > 0) {
