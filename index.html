@@ -475,6 +475,18 @@
             color: #888;
             margin-left: auto;
         }
+        .popup-download-all-btn {
+            background: #0f3460;
+            color: white;
+            border: none;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .popup-download-all-btn:hover {
+            opacity: 0.8;
+        }
         .popup-restore-btn {
             background: #6f3689;
             color: white;
@@ -1175,10 +1187,12 @@
             const visiblePhotos = isOwn ? sorted.filter(p => !hidden.includes(photoKey(p.album_id, p.photo))) : sorted;
             const hiddenPhotos = isOwn ? sorted.filter(p => hidden.includes(photoKey(p.album_id, p.photo))) : [];
 
-            let html = '';
+            let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+            html += `<button class="popup-download-all-btn" onclick="downloadAllPhotos('${m.name.replace(/'/g, "\\'")}')">&#11015; Download alle (${visiblePhotos.length})</button>`;
             if (isOwn && hidden.length > 0) {
-                html += `<div style="text-align:right;margin-bottom:6px;"><button class="popup-restore-btn" onclick="restoreAllPhotos()">Herstel alle foto\'s (${hiddenPhotos.length})</button></div>`;
+                html += `<button class="popup-restore-btn" onclick="restoreAllPhotos()">Herstel (${hiddenPhotos.length})</button>`;
             }
+            html += '</div>';
             const photoSrcs = visiblePhotos.map(p => `albums/${p.album_id}/${p.photo}`);
             const gridId = 'pg_' + m.name.replace(/\W/g, '_');
             html += `<div class="popup-photo-grid" id="${gridId}" data-photos='${JSON.stringify(photoSrcs)}'>`;
@@ -1645,6 +1659,23 @@
         document.getElementById('photoLightbox').addEventListener('click', function(e) {
             if (e.target === this) closeLightbox();
         });
+
+        window.downloadAllPhotos = async function(memberName) {
+            const photos = memberPhotos[memberName];
+            if (!photos) return;
+            const hidden = getHiddenPhotos();
+            const visible = photos.filter(p => !hidden.includes(photoKey(p.album_id, p.photo)));
+            for (const p of visible) {
+                const src = `albums/${p.album_id}/${p.photo}`;
+                const a = document.createElement('a');
+                a.href = src;
+                a.download = `${memberName.replace(/ /g, '_')}_${p.photo}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                await new Promise(r => setTimeout(r, 300));
+            }
+        };
 
         window.downloadLightboxPhoto = function() {
             const a = document.createElement('a');
