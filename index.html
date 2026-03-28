@@ -1117,13 +1117,13 @@
                 html += `<div style="text-align:right;margin-bottom:6px;"><button class="popup-restore-btn" onclick="restoreAllPhotos()">Herstel alle foto\'s (${hiddenPhotos.length})</button></div>`;
             }
             const photoSrcs = visiblePhotos.map(p => `albums/${p.album_id}/${p.photo}`);
-            const photoListJson = JSON.stringify(photoSrcs).replace(/'/g, "\\'");
-            html += '<div class="popup-photo-grid">';
+            const gridId = 'pg_' + m.name.replace(/\W/g, '_');
+            html += `<div class="popup-photo-grid" id="${gridId}" data-photos='${JSON.stringify(photoSrcs)}'>`;
             visiblePhotos.forEach((p, idx) => {
                 const fullSrc = photoSrcs[idx];
                 const key = photoKey(p.album_id, p.photo);
                 html += `<div class="popup-photo-thumb">`;
-                html += `<img src="${fullSrc}" alt="${p.album}" onclick="openLightbox('${fullSrc}', ${photoListJson})"/>`;
+                html += `<img src="${fullSrc}" alt="${p.album}" onclick="openFromGrid(this)"/>`;
                 html += `<div class="popup-photo-album">${p.album}</div>`;
                 if (isOwn) {
                     html += `<button class="popup-photo-delete" onclick="event.stopPropagation();hidePhoto('${key}','${m.name}')" title="Verberg foto">&#10005;</button>`;
@@ -1445,6 +1445,14 @@
                 container.appendChild(el);
             });
         }
+
+        window.openFromGrid = function(img) {
+            const grid = img.closest('.popup-photo-grid');
+            const list = grid ? JSON.parse(grid.dataset.photos || '[]') : [];
+            // img.src is absolute, extract relative path
+            const src = img.getAttribute('src') || img.src;
+            openLightbox(src, list);
+        };
 
         window.openLightbox = function(src, photoList) {
             currentLightboxSrc = src;
