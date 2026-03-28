@@ -189,6 +189,44 @@
         .lightbox-toolbar button:hover {
             background: rgba(255,255,255,0.3);
         }
+        .lightbox-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: none;
+            font-size: 28px;
+            padding: 12px 16px;
+            cursor: pointer;
+            z-index: 10002;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+            transition: background 0.15s;
+            display: none;
+        }
+        .lightbox-arrow:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .photo-lightbox.has-nav .lightbox-arrow {
+            display: block;
+        }
+        .lightbox-prev {
+            left: 12px;
+        }
+        .lightbox-next {
+            right: 12px;
+        }
+        .lightbox-counter {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.7);
+            font-size: 13px;
+            z-index: 10002;
+            pointer-events: none;
+        }
         .lightbox-inner {
             display: flex;
             flex-direction: column;
@@ -748,6 +786,8 @@
             <button onclick="downloadLightboxPhoto()" title="Download">&#11015; Download</button>
             <button onclick="closeLightbox()" title="Sluiten">&#10005;</button>
         </div>
+        <button class="lightbox-arrow lightbox-prev" onclick="event.stopPropagation();lightboxNav(-1)">&#10094;</button>
+        <button class="lightbox-arrow lightbox-next" onclick="event.stopPropagation();lightboxNav(1)">&#10095;</button>
         <div class="lightbox-inner" onclick="event.stopPropagation()">
             <img id="lightboxImg" src="" alt="">
             <div class="lightbox-people" id="lightboxPeople"></div>
@@ -765,10 +805,6 @@
                 <button class="filter-btn" data-filter="all">Iedereen</button>
                 <button class="filter-btn active" data-filter="active">Actieve leden</button>
                 <button class="filter-btn" data-filter="quotes">Grappenmakers</button>
-            </div>
-            <div class="view-toggle">
-                <button class="filter-btn" data-view="pin" id="viewPin">Markers</button>
-                <button class="filter-btn active" data-view="photo" id="viewPhoto">Foto's</button>
             </div>
             <div style="margin-top: 8px;">
                 <button class="filter-btn" id="groupModeBtn">Huizen beheren</button>
@@ -1080,12 +1116,14 @@
             if (isOwn && hidden.length > 0) {
                 html += `<div style="text-align:right;margin-bottom:6px;"><button class="popup-restore-btn" onclick="restoreAllPhotos()">Herstel alle foto\'s (${hiddenPhotos.length})</button></div>`;
             }
+            const photoSrcs = visiblePhotos.map(p => `albums/${p.album_id}/${p.photo}`);
+            const photoListJson = JSON.stringify(photoSrcs).replace(/'/g, "\\'");
             html += '<div class="popup-photo-grid">';
-            visiblePhotos.forEach(p => {
-                const fullSrc = `albums/${p.album_id}/${p.photo}`;
+            visiblePhotos.forEach((p, idx) => {
+                const fullSrc = photoSrcs[idx];
                 const key = photoKey(p.album_id, p.photo);
                 html += `<div class="popup-photo-thumb">`;
-                html += `<img src="${fullSrc}" alt="${p.album}" onclick="openLightbox('${fullSrc}')"/>`;
+                html += `<img src="${fullSrc}" alt="${p.album}" onclick="openLightbox('${fullSrc}', ${photoListJson})"/>`;
                 html += `<div class="popup-photo-album">${p.album}</div>`;
                 if (isOwn) {
                     html += `<button class="popup-photo-delete" onclick="event.stopPropagation();hidePhoto('${key}','${m.name}')" title="Verberg foto">&#10005;</button>`;
@@ -1175,15 +1213,6 @@
         });
 
         // View toggle (Markers / Foto's)
-        document.querySelectorAll('.view-toggle .filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.view-toggle .filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                currentView = this.dataset.view;
-                renderMarkers();
-            });
-        });
-
         const searchInput = document.getElementById('search');
         const searchResults = document.getElementById('searchResults');
 
@@ -1389,6 +1418,8 @@
         };
 
         let currentLightboxSrc = '';
+        let lightboxPhotoList = [];
+        let lightboxPhotoIdx = 0;
 
         function renderLightboxPeople() {
             const container = document.getElementById('lightboxPeople');
@@ -1415,13 +1446,41 @@
             });
         }
 
-        window.openLightbox = function(src) {
+        window.openLightbox = function(src, photoList) {
             currentLightboxSrc = src;
             const lb = document.getElementById('photoLightbox');
             document.getElementById('lightboxImg').src = src;
             lb.classList.add('open');
+
+            if (photoList && photoList.length > 1) {
+                lightboxPhotoList = photoList;
+                lightboxPhotoIdx = photoList.indexOf(src);
+                if (lightboxPhotoIdx < 0) lightboxPhotoIdx = 0;
+                lb.classList.add('has-nav');
+            } else {
+                lightboxPhotoList = [];
+                lightboxPhotoIdx = 0;
+                lb.classList.remove('has-nav');
+            }
             renderLightboxPeople();
         };
+
+        window.lightboxNav = function(dir) {
+            if (lightboxPhotoList.length === 0) return;
+            lightboxPhotoIdx = (lightboxPhotoIdx + dir + lightboxPhotoList.length) % lightboxPhotoList.length;
+            currentLightboxSrc = lightboxPhotoList[lightboxPhotoIdx];
+            document.getElementById('lightboxImg').src = currentLightboxSrc;
+            renderLightboxPeople();
+        };
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            const lb = document.getElementById('photoLightbox');
+            if (!lb.classList.contains('open')) return;
+            if (e.key === 'ArrowLeft') lightboxNav(-1);
+            else if (e.key === 'ArrowRight') lightboxNav(1);
+            else if (e.key === 'Escape') closeLightbox();
+        });
 
         window.closeLightbox = function() {
             document.getElementById('photoLightbox').classList.remove('open');
