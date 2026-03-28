@@ -1667,7 +1667,7 @@
                 container.appendChild(label);
             }
 
-            const isAlbumPhoto = currentLightboxSrc.startsWith('albums/');
+            const isAlbumPhoto = currentLightboxSrc.includes('albums/');
             const people = isAlbumPhoto ? getPeopleForPhoto(currentLightboxSrc) : [];
             const admin = isAdmin();
 
@@ -1698,7 +1698,7 @@
                 container.appendChild(el);
             });
 
-            if (admin && currentLightboxSrc.startsWith('albums/')) {
+            if (admin && currentLightboxSrc.includes('albums/')) {
                 const addBtn = document.createElement('div');
                 addBtn.className = 'lightbox-person lp-add';
                 addBtn.textContent = '+ Tag';
