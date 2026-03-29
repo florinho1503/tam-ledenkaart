@@ -1347,8 +1347,14 @@
                 if (!already && src.includes('/')) {
                     const albumId = src.replace('albums/', '').split('/')[0];
                     const photoName = src.replace(`albums/${albumId}/`, '');
+                    // Find album name from any member who has this album
+                    let albumName = `Album ${albumId}`;
+                    for (const [, memberPs] of Object.entries(memberPhotos)) {
+                        const found = memberPs.find(mp => mp.album_id === albumId);
+                        if (found && found.album) { albumName = found.album; break; }
+                    }
                     photos.push({
-                        album: photoToAlbum[src] || `Album ${albumId}`,
+                        album: albumName,
                         album_id: albumId,
                         photo: photoName,
                         similarity: 1.0,
