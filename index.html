@@ -1344,19 +1344,16 @@
                 if (!people.includes(name)) continue;
                 // Check if already in the list
                 const already = photos.some(p => `albums/${p.album_id}/${p.photo}` === src);
-                if (!already) {
-                    const parts = src.replace('albums/', '').split('/', 1);
-                    if (parts.length === 2 || src.includes('/')) {
-                        const albumId = src.replace('albums/', '').split('/')[0];
-                        const photoName = src.replace(`albums/${albumId}/`, '');
-                        photos.push({
-                            album: `Album ${albumId}`,
-                            album_id: albumId,
-                            photo: photoName,
-                            similarity: 1.0,
-                            crop: null,
-                        });
-                    }
+                if (!already && src.includes('/')) {
+                    const albumId = src.replace('albums/', '').split('/')[0];
+                    const photoName = src.replace(`albums/${albumId}/`, '');
+                    photos.push({
+                        album: photoToAlbum[src] || `Album ${albumId}`,
+                        album_id: albumId,
+                        photo: photoName,
+                        similarity: 1.0,
+                        crop: null,
+                    });
                 }
             }
             return photos;
