@@ -2576,38 +2576,59 @@
             document.getElementById('wihModeSelect').style.display = 'none';
             document.getElementById('wihGame').style.display = '';
 
-            // Pre-build round list
+            // Pre-build round list: pick member first, then photo
             const candidates = getGamePhotos();
             const myName = getLoggedInName();
-            const hiddenCount = {};
             wihRoundList = [];
+            const usedPhotos = new Set();
+            const hiddenCount = {};
 
-            // Ensure at least 1 photo with the logged-in user
-            if (myName) {
-                const myCandidates = candidates.filter(c => c.faces.some(f => f.name === myName));
-                if (myCandidates.length > 0) {
-                    const pick = myCandidates[Math.floor(Math.random() * myCandidates.length)];
-                    const myFaces = pick.faces.filter(f => f.name === myName);
-                    const face = myFaces[Math.floor(Math.random() * myFaces.length)];
-                    wihRoundList.push({ pick, face });
-                    hiddenCount[face.name] = 1;
+            // Build index: member -> list of game photos they appear in
+            const memberGamePhotos = {};
+            candidates.forEach(c => {
+                c.faces.forEach(f => {
+                    if (!memberGamePhotos[f.name]) memberGamePhotos[f.name] = [];
+                    memberGamePhotos[f.name].push({ pick: c, face: f });
+                });
+            });
+
+            const eligibleMembers = Object.keys(memberGamePhotos);
+
+            function pickRound(forceMember) {
+                let pool = forceMember ? [forceMember] : [...eligibleMembers];
+                // Shuffle pool
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
                 }
+                for (const member of pool) {
+                    if ((hiddenCount[member] || 0) >= 2) continue;
+                    const photos = memberGamePhotos[member].filter(p => !usedPhotos.has(p.pick.src));
+                    if (photos.length === 0) continue;
+                    const chosen = photos[Math.floor(Math.random() * photos.length)];
+                    usedPhotos.add(chosen.pick.src);
+                    hiddenCount[member] = (hiddenCount[member] || 0) + 1;
+                    return chosen;
+                }
+                return null;
+            }
+
+            // Ensure at least 1 round with logged-in user
+            if (myName && memberGamePhotos[myName]) {
+                const round = pickRound(myName);
+                if (round) wihRoundList.push(round);
             }
 
             // Fill remaining rounds
             let safety = 0;
             while (wihRoundList.length < WIH_ROUNDS && safety < 500) {
                 safety++;
-                const pick = candidates[Math.floor(Math.random() * candidates.length)];
-                const faceIdx = Math.floor(Math.random() * pick.faces.length);
-                const face = pick.faces[faceIdx];
-                // Max 2 times same hidden person
-                if ((hiddenCount[face.name] || 0) >= 2) continue;
-                wihRoundList.push({ pick, face });
-                hiddenCount[face.name] = (hiddenCount[face.name] || 0) + 1;
+                const round = pickRound(null);
+                if (round) wihRoundList.push(round);
+                else break;
             }
 
-            // Shuffle but keep the "my" round somewhere random
+            // Shuffle
             for (let i = wihRoundList.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [wihRoundList[i], wihRoundList[j]] = [wihRoundList[j], wihRoundList[i]];
