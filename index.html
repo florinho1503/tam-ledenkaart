@@ -533,6 +533,27 @@
         .popup-photo-thumb:hover .popup-photo-delete {
             opacity: 1;
         }
+        .wih-fab {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #6f3689, #e67e22);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 16px rgba(111,54,137,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .wih-fab:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 6px 24px rgba(111,54,137,0.5);
+        }
         .wih-overlay {
             display: none;
             position: fixed;
@@ -668,6 +689,61 @@
             cursor: pointer;
         }
         .wih-next:hover { opacity: 0.9; }
+        .wih-timer {
+            font-size: 16px;
+            font-weight: 800;
+            color: #2ecc71;
+            min-width: 30px;
+            text-align: center;
+        }
+        .wih-timer.urgent {
+            color: #e74c3c;
+            animation: timer-pulse 0.5s ease-in-out infinite;
+        }
+        @keyframes timer-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        .wih-end {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .wih-end-score {
+            font-size: 48px;
+            font-weight: 800;
+            color: #6f3689;
+        }
+        .wih-end-label {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 16px;
+        }
+        .wih-leaderboard {
+            text-align: left;
+            margin: 12px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .wih-lb-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #6f3689;
+            margin-bottom: 6px;
+        }
+        .wih-lb-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 13px;
+        }
+        .wih-lb-row.you {
+            font-weight: 700;
+            color: #6f3689;
+        }
+        .wih-lb-rank { width: 20px; text-align: right; color: #888; }
+        .wih-lb-name { flex: 1; }
+        .wih-lb-score { font-weight: 600; color: #6f3689; }
         .wih-mode-select {
             text-align: center;
             padding: 16px 0;
@@ -1199,6 +1275,7 @@
         </div>
     </div>
     <div id="map"></div>
+    <button class="wih-fab" onclick="startWieIsHet()">Wie is de TAMmer?</button>
     <div class="photo-lightbox" id="photoLightbox">
         <div class="lightbox-toolbar" onclick="event.stopPropagation()">
             <button onclick="downloadLightboxPhoto()" title="Download">&#11015; Download</button>
@@ -1214,8 +1291,9 @@
     <div class="wih-overlay" id="wihOverlay">
         <div class="wih-box">
             <div class="wih-header">
-                <span class="wih-title">Wie is het?</span>
-                <span class="wih-score" id="wihScore">0/0</span>
+                <span class="wih-title">Wie is de TAMmer?</span>
+                <span class="wih-timer" id="wihTimer"></span>
+                <span class="wih-score" id="wihScore">0/20</span>
                 <button class="wih-close" onclick="closeWieIsHet()">&#10005;</button>
             </div>
             <div class="wih-photo-wrap" id="wihPhotoWrap">
@@ -1236,15 +1314,21 @@
                 <div class="wih-feedback" id="wihFeedback"></div>
                 <button class="wih-next" id="wihNext" onclick="nextWihRound()" style="display:none">Volgende →</button>
             </div>
+            <div class="wih-end" id="wihEnd" style="display:none">
+                <div class="wih-end-score" id="wihEndScore"></div>
+                <div class="wih-end-label">Je score</div>
+                <div class="wih-leaderboard" id="wihLeaderboard"></div>
+                <button class="wih-next" onclick="startWieIsHet()">Opnieuw spelen</button>
+            </div>
         </div>
     </div>
     <div class="info-box">
         <h2 id="infoToggle">TAM Ledenkaart <span class="toggle-icon">▾</span></h2>
+        <div style="margin-bottom:8px;">
+            <input type="text" id="search" placeholder="Zoek een lid..." autocomplete="off" style="width:100%;padding:6px 12px;border:2px solid #ccc;border-radius:16px;font-size:16px;outline:none;">
+            <div class="search-results" id="searchResults"></div>
+        </div>
         <div class="info-body">
-            <div style="margin-bottom:8px;">
-                <input type="text" id="search" placeholder="Zoek een lid..." autocomplete="off" style="width:100%;padding:6px 12px;border:2px solid #ccc;border-radius:16px;font-size:16px;outline:none;">
-                <div class="search-results" id="searchResults"></div>
-            </div>
             <div class="count" id="memberCount">605 leden</div>
             <div class="filter-group">
                 <button class="filter-btn" data-filter="all">Iedereen</button>
@@ -1258,7 +1342,6 @@
                 <div class="leaderboard-content" id="leaderboardContent"></div>
             </div>
             <div style="margin-top: 8px;">
-                <button class="filter-btn" onclick="startWieIsHet()">Wie is het?</button>
                 <button class="filter-btn" id="groupModeBtn">Huizen beheren</button>
             </div>
         </div>
@@ -1537,7 +1620,7 @@
             const avatar = member && member.avatar
                 ? `<img src="${member.avatar}" alt="${la.match}"/>`
                 : '';
-            return `<div class="popup-lookalike" onclick="findAndOpenLb('${la.match.replace(/'/g, "\\'")}')">
+            return `<div class="popup-lookalike" onclick="openLightbox(members.find(x=>x.name==='${la.match.replace(/'/g, "\\'")}')?.avatar || '')">
                 <div class="lookalike-label">TAM Look-a-like</div>
                 <div class="lookalike-match">
                     <div class="lookalike-avatar">${avatar}</div>
@@ -2453,11 +2536,16 @@
             document.getElementById('leaderboardContent').innerHTML = html;
         })();
 
-        // === Wie is het? game ===
+        // === Wie is de TAMmer? game ===
+        const WIH_ROUNDS = 20;
+        const WIH_TIME = 30;
         let wihCorrect = 0, wihTotal = 0, wihAnswered = false;
         let wihHiddenBox = null;
         let wihMode = 'easy';
         let wihCurrentAnswer = '';
+        let wihTimerInterval = null;
+        let wihTimeLeft = 0;
+        let wihRoundList = [];
 
         function getGamePhotos() {
             const candidates = [];
@@ -2472,11 +2560,13 @@
         window.startWieIsHet = function() {
             wihCorrect = 0;
             wihTotal = 0;
+            if (wihTimerInterval) clearInterval(wihTimerInterval);
             document.getElementById('wihOverlay').classList.add('open');
             document.getElementById('wihModeSelect').style.display = '';
             document.getElementById('wihGame').style.display = 'none';
-            document.getElementById('wihScore').textContent = '0/0';
-            // Clear photo
+            document.getElementById('wihEnd').style.display = 'none';
+            document.getElementById('wihScore').textContent = `0/${WIH_ROUNDS}`;
+            document.getElementById('wihTimer').textContent = '';
             document.querySelectorAll('.wih-face-blur').forEach(e => e.remove());
             document.getElementById('wihPhoto').src = '';
         };
@@ -2485,36 +2575,145 @@
             wihMode = mode;
             document.getElementById('wihModeSelect').style.display = 'none';
             document.getElementById('wihGame').style.display = '';
+
+            // Pre-build round list
+            const candidates = getGamePhotos();
+            const myName = getLoggedInName();
+            const hiddenCount = {};
+            wihRoundList = [];
+
+            // Ensure at least 1 photo with the logged-in user
+            if (myName) {
+                const myCandidates = candidates.filter(c => c.faces.some(f => f.name === myName));
+                if (myCandidates.length > 0) {
+                    const pick = myCandidates[Math.floor(Math.random() * myCandidates.length)];
+                    const myFaces = pick.faces.filter(f => f.name === myName);
+                    const face = myFaces[Math.floor(Math.random() * myFaces.length)];
+                    wihRoundList.push({ pick, face });
+                    hiddenCount[face.name] = 1;
+                }
+            }
+
+            // Fill remaining rounds
+            let safety = 0;
+            while (wihRoundList.length < WIH_ROUNDS && safety < 500) {
+                safety++;
+                const pick = candidates[Math.floor(Math.random() * candidates.length)];
+                const faceIdx = Math.floor(Math.random() * pick.faces.length);
+                const face = pick.faces[faceIdx];
+                // Max 2 times same hidden person
+                if ((hiddenCount[face.name] || 0) >= 2) continue;
+                wihRoundList.push({ pick, face });
+                hiddenCount[face.name] = (hiddenCount[face.name] || 0) + 1;
+            }
+
+            // Shuffle but keep the "my" round somewhere random
+            for (let i = wihRoundList.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [wihRoundList[i], wihRoundList[j]] = [wihRoundList[j], wihRoundList[i]];
+            }
+
             nextWihRound();
         };
+
+        function wihStartTimer() {
+            if (wihTimerInterval) clearInterval(wihTimerInterval);
+            wihTimeLeft = WIH_TIME;
+            const timerEl = document.getElementById('wihTimer');
+            timerEl.textContent = wihTimeLeft;
+            timerEl.classList.remove('urgent');
+            wihTimerInterval = setInterval(() => {
+                wihTimeLeft--;
+                timerEl.textContent = wihTimeLeft;
+                if (wihTimeLeft <= 5) timerEl.classList.add('urgent');
+                if (wihTimeLeft <= 0) {
+                    clearInterval(wihTimerInterval);
+                    if (!wihAnswered) {
+                        wihGuess(null, '__timeout__', wihCurrentAnswer);
+                    }
+                }
+            }, 1000);
+        }
+
+        function wihEndGame() {
+            if (wihTimerInterval) clearInterval(wihTimerInterval);
+            document.getElementById('wihGame').style.display = 'none';
+            document.getElementById('wihEnd').style.display = '';
+            document.getElementById('wihEndScore').textContent = `${wihCorrect}/${WIH_ROUNDS}`;
+
+            // Save to leaderboard
+            const email = localStorage.getItem('tam_email') || 'anon';
+            const member = members.find(m => m.email && m.email.toLowerCase() === email);
+            const playerName = member ? member.name : email;
+            const lbKey = wihMode === 'easy' ? 'wih_leaderboard_easy' : 'wih_leaderboard_hard';
+
+            fetch(SYNC_URL + '/' + lbKey).then(r => r.json()).then(lb => {
+                if (!Array.isArray(lb)) lb = [];
+                lb.push({ name: playerName, score: wihCorrect, date: new Date().toISOString().slice(0,10) });
+                // Keep best score per player, sorted
+                const best = {};
+                lb.forEach(e => {
+                    if (!best[e.name] || e.score > best[e.name].score) best[e.name] = e;
+                });
+                const sorted = Object.values(best).sort((a, b) => b.score - a.score);
+                fetch(SYNC_URL + '/' + lbKey, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(sorted)
+                });
+                // Also log every game play
+                fetch(SYNC_URL + '/wih_games', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name: playerName, score: wihCorrect, rounds: WIH_ROUNDS, mode: wihMode })
+                }).catch(() => {});
+                renderWihLeaderboard(sorted, playerName);
+            }).catch(() => {});
+        }
+
+        function renderWihLeaderboard(lb, playerName) {
+            const modeLabel = wihMode === 'easy' ? 'Makkelijk' : 'Hardcore';
+            let html = `<div class="wih-lb-title">Leaderboard (${modeLabel})</div>`;
+            lb.slice(0, 10).forEach((e, i) => {
+                const isYou = e.name === playerName;
+                html += `<div class="wih-lb-row ${isYou ? 'you' : ''}">`;
+                html += `<span class="wih-lb-rank">${i + 1}.</span>`;
+                html += `<span class="wih-lb-name">${e.name}${isYou ? ' (jij)' : ''}</span>`;
+                html += `<span class="wih-lb-score">${e.score}/${WIH_ROUNDS}</span>`;
+                html += `</div>`;
+            });
+            document.getElementById('wihLeaderboard').innerHTML = html;
+        }
 
         window.closeWieIsHet = function() {
             document.getElementById('wihOverlay').classList.remove('open');
         };
 
         window.nextWihRound = function() {
+            if (wihTotal >= WIH_ROUNDS || wihTotal >= wihRoundList.length) {
+                wihEndGame();
+                return;
+            }
             wihAnswered = false;
-            const candidates = getGamePhotos();
-            if (candidates.length === 0) return;
 
-            const pick = candidates[Math.floor(Math.random() * candidates.length)];
-            // Pick a random face to hide — we know who it is!
-            const hiddenIdx = Math.floor(Math.random() * pick.faces.length);
-            const hiddenFace = pick.faces[hiddenIdx];
+            const round = wihRoundList[wihTotal];
+            const pick = round.pick;
+            const hiddenFace = round.face;
             const hiddenName = hiddenFace.name;
             wihHiddenBox = hiddenFace;
-            const shownPeople = pick.faces.filter((_, i) => i !== hiddenIdx).map(f => f.name);
-            // Deduplicate shown people
+            const shownPeople = pick.faces.filter(f => f !== hiddenFace).map(f => f.name);
             const shownUnique = [...new Set(shownPeople)];
 
-            const allNames = Object.keys(memberPhotos);
+            const allNames = Object.keys(memberPhotos).filter(n => memberPhotos[n].length > 0);
             const wrongOptions = [];
             const allInPhoto = pick.faces.map(f => f.name);
-            while (wrongOptions.length < 3) {
+            let safety = 0;
+            while (wrongOptions.length < 3 && safety < 100) {
                 const r = allNames[Math.floor(Math.random() * allNames.length)];
                 if (!allInPhoto.includes(r) && !wrongOptions.includes(r)) {
                     wrongOptions.push(r);
                 }
+                safety++;
             }
             const options = [hiddenName, ...wrongOptions].sort(() => Math.random() - 0.5);
 
@@ -2570,11 +2769,14 @@
 
             document.getElementById('wihFeedback').textContent = '';
             document.getElementById('wihNext').style.display = 'none';
+            document.getElementById('wihScore').textContent = `${wihCorrect}/${WIH_ROUNDS} (ronde ${wihTotal + 1})`;
+            wihStartTimer();
         };
 
         window.wihGuess = function(el, guess, answer) {
             if (wihAnswered) return;
             wihAnswered = true;
+            if (wihTimerInterval) clearInterval(wihTimerInterval);
             wihTotal++;
 
             document.querySelectorAll('.wih-option').forEach(o => {
@@ -2585,15 +2787,19 @@
             // Reveal: remove blur overlays
             document.querySelectorAll('.wih-face-blur').forEach(e => e.remove());
 
-            if (guess === answer) {
+            if (guess === '__timeout__') {
+                document.getElementById('wihFeedback').innerHTML = `<span style="color:#e67e22">Tijd op! Het was ${answer}</span>`;
+            } else if (guess === answer) {
                 wihCorrect++;
                 document.getElementById('wihFeedback').innerHTML = '<span style="color:#2ecc71">Goed! ✓</span>';
             } else {
                 document.getElementById('wihFeedback').innerHTML = `<span style="color:#e74c3c">Fout! Het was ${answer}</span>`;
             }
 
-            document.getElementById('wihScore').textContent = `${wihCorrect}/${wihTotal}`;
-            document.getElementById('wihNext').style.display = '';
+            document.getElementById('wihScore').textContent = `${wihCorrect}/${WIH_ROUNDS} (ronde ${wihTotal})`;
+            const nextBtn = document.getElementById('wihNext');
+            nextBtn.style.display = '';
+            nextBtn.textContent = wihTotal >= WIH_ROUNDS ? 'Bekijk score →' : 'Volgende →';
         };
 
         // Hardcore mode: type-ahead search
