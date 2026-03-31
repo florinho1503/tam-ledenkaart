@@ -1482,6 +1482,13 @@
             maxZoom: 19
         }).addTo(map);
 
+        // Auto-collapse info box when popup opens on mobile
+        map.on('popupopen', function() {
+            if (window.innerWidth <= 600) {
+                document.querySelector('.info-box').classList.add('collapsed');
+            }
+        });
+
         const purpleIcon = L.divIcon({
             className: 'custom-marker',
             html: '<svg width="25" height="41" viewBox="0 0 25 41"><path d="M12.5 0C5.6 0 0 5.6 0 12.5C0 21.9 12.5 41 12.5 41S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0Z" fill="#6f3689"/><circle cx="12.5" cy="12.5" r="5" fill="white"/></svg>',
@@ -1567,7 +1574,7 @@
         function buildPopupDetailInfo(m) {
             let html = '';
             if (isAdmin() && m.street) html += `<div class="popup-address">${m.street}, ${m.postcode} ${m.city}</div>`;
-            html += `<div class="popup-phone"><a href="tel:${m.phone}">&#128222; ${m.phone}</a></div>`;
+            if (isAdmin()) html += `<div class="popup-phone"><a href="tel:${m.phone}">&#128222; ${m.phone}</a></div>`;
             if (m.commissies && m.commissies.length > 0) {
                 html += `<div class="popup-commissies">${m.commissies.map(c => `<span>${c}</span>`).join('')}</div>`;
             }
@@ -1686,7 +1693,7 @@
             html += `<div class="popup-name">${m.name}</div>`;
             html += buildRookieBadge(m.name);
             if (isAdmin() && m.street) html += `<div class="popup-address">${m.street}, ${m.postcode} ${m.city}</div>`;
-            html += `<div class="popup-phone"><a href="tel:${m.phone}">&#128222; ${m.phone}</a></div>`;
+            if (isAdmin()) html += `<div class="popup-phone"><a href="tel:${m.phone}">&#128222; ${m.phone}</a></div>`;
             if (m.commissies && m.commissies.length > 0) {
                 html += `<div class="popup-commissies">${m.commissies.map(c => `<span>${c}</span>`).join('')}</div>`;
             }
